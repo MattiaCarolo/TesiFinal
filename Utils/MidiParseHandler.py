@@ -86,7 +86,7 @@ def multiprocess_data_conversion(file_paths, num_processes, timeout=120):
     failed_files = []
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
-        future_to_file = {executor.submit(multi_readed, (file, idx)): file for idx, file in enumerate(file_paths)}
+        future_to_file = {executor.submit(multi_readed_mido, (file, idx)): file for idx, file in enumerate(file_paths)}
         total_files = len(file_paths)
         processed_files = 0
 
