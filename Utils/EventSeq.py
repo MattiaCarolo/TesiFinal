@@ -131,12 +131,13 @@ class EventSeq:
                          n / (EventSeq.velocity_steps - 1))
 
     def __init__(self, events=[]):
-        for event in events:
-            assert isinstance(event, Event)
+        #for event in events:
+            #print("oggetto di tipo = " + str(type(event)))
+        #    assert isinstance(event, Event)
 
         self.events = copy.deepcopy(events)
 
-        # compute event times again
+        # compute event times again to consider time_shift
         time = 0
         for event in self.events:
             event.time = time
