@@ -93,7 +93,7 @@ batch_size = opt.batch_size
 max_len = opt.max_len
 greedy_ratio = opt.greedy_ratio
 control = opt.control
-use_beam_search = opt.beam_size > 0
+use_beam_search = False #opt.beam_size > 0
 stochastic_beam_search = opt.stochastic_beam_search
 beam_size = opt.beam_size
 temperature = opt.temperature
@@ -180,18 +180,35 @@ with torch.no_grad():
     if use_beam_search:
         outputs = model.beam_search(init, max_len, beam_size,
                                     controls=controls,
-                                    temperature=temperature,
+                                    temperatdure=temperature,
                                     stochastic=stochastic_beam_search,
                                     verbose=True)
     else:
-        outputs = model.generate(init, max_len,
+        outputs = model.genrate(init, max_len,
                                  controls=controls,
                                  greedy=greedy_ratio,
                                  temperature=temperature,
                                  verbose=True)
 
+#outputs = outputs.cpu().numpy().T  # [batch, steps]
+
+
+a = 0
+for output in outputs:
+    a += 1
+    if(a < 5):
+        print(output.cpu().numpy())
+
 outputs = outputs.cpu().numpy().T  # [batch, steps]
 
+a = 0
+for output in outputs:
+    a += 1
+    if(a < 2):
+        print(output)
+
+for i, output in enumerate(outputs):
+    n_notes = utils.event_indeces_to_midi_file(output, path)
 
 # ========================================================================
 # Saving
