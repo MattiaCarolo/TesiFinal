@@ -138,6 +138,7 @@ class PerformanceRNN(nn.Module):
 
             if output_type == 'index':
                 outputs.append((event,output))
+                return outputs
             elif output_type == 'softmax':
                 outputs.append(self.output_fc_activation(output))
             elif output_type == 'logit':
@@ -155,8 +156,8 @@ class Guren(nn.Module):
     def __init__(self, modelA = None, modelB = None):
         super().__init__()
 
-        self.modelA = modelA.to('cpu')
-        self.modelB = modelB.to('cpu')
+        self.modelA = modelA.to('cuda')
+        self.modelB = modelB.to('cuda')
         
 
     def generate(self, e1, e2, c1, c2, batch_size,
@@ -175,10 +176,8 @@ class Guren(nn.Module):
 
         init = torch.randn(batch_size, self.modelA.init_dim).to(device)
 
-        (_, logits) = self.modelA.generate(init, batch_size, self.modelA.init_dim, 
-                                     window_size, events=events[:-1], controls=controls,output_type='index')
-        
-        outputsA = logits
+        outputsA = self.modelA.generate(init, batch_size, self.modelA.init_dim, 
+                                     window_size, events=events[:-1], controls=controls,output_type='logit')
 
         events2 = torch.LongTensor(e2).to(device)
         assert events2.shape[0] == window_size
@@ -193,12 +192,12 @@ class Guren(nn.Module):
 
         init = torch.randn(batch_size, self.modelB.init_dim).to(device)
 
-        outputsB = self.modelB.generate(init,batch_size, init_dim, window_size, 
+        outputsB = self.modelB.generate(init,batch_size, self.modelB.init_dim, window_size, 
                             events=events2[:-1], controls=controls)
         
         assert outputsB.shape[:2] == events2.shape[:2]
         outputsF = torch.cat((outputsA, outputsB),2)
-        print(outputsF)
+        #print(outputsF)
 
         softed = self.modelB.output_fc_activation(outputsF)
         outputs.append(softed)

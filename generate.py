@@ -184,7 +184,7 @@ with torch.no_grad():
                                     stochastic=stochastic_beam_search,
                                     verbose=True)
     else:
-        outputs = model.genrate(init, max_len,
+        outputs = model.generate(init, max_len,
                                  controls=controls,
                                  greedy=greedy_ratio,
                                  temperature=temperature,
