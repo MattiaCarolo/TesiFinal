@@ -54,13 +54,13 @@ class PerformanceRNN(nn.Module):
             probs = self.output_fc_activation(output)
             return Categorical(probs).sample()
 
-    def forward(self, event, control=None, hidden=None):
+    def forward(self, event, control=None, hidden=None, condition = None):
         # One step forward
 
         assert len(event.shape) == 2
         assert event.shape[0] == 1
         batch_size = event.shape[1]
-        event = self.event_embedding(event)
+        event = self.event_embedding(event)#mix here
 
         if control is None:
             default = torch.ones(1, batch_size, 1).to(device)
@@ -69,8 +69,8 @@ class PerformanceRNN(nn.Module):
             default = torch.zeros(1, batch_size, 1).to(device)
             assert control.shape == (1, batch_size, self.control_dim)
 
-        concat = torch.cat([event, default, control], -1)
-        input = self.concat_input_fc(concat)  #nn.Linear(self.concat_dim, self.input_dim)
+        concat = torch.cat([event, default, control], -1) # TODO add dimension to consider event output
+        input = self.concat_input_fc(concat)  #nn.Linear(self.concat_dim, self.input_dim + event_dim)
         input = self.concat_input_fc_activation(input)  #nn.LeakyReLU(0.1, inplace=True)
 
         _, hidden = self.gru(input, hidden)  #nn.GRU(self.input_dim, self.hidden_dim,num_layers=gru_layers, dropout=gru_dropout)
