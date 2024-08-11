@@ -8,7 +8,7 @@ import numpy as np
 from progress.bar import Bar
 from config import device
 
-class PerformanceRNN(nn.Module):
+class PerformanceRNN2(nn.Module):
     def __init__(self, event_dim, control_dim, init_dim, hidden_dim,
                  inithid_fc = None, gru_layers=3, gru_dropout=0.3):
         super().__init__()
@@ -18,7 +18,7 @@ class PerformanceRNN(nn.Module):
         self.init_dim = init_dim
         self.hidden_dim = hidden_dim
         self.gru_layers = gru_layers
-        self.concat_dim = event_dim + 1 + control_dim
+        self.concat_dim = event_dim + event_dim + 1 + control_dim
         self.input_dim = hidden_dim
         self.output_dim = event_dim
 
@@ -54,7 +54,7 @@ class PerformanceRNN(nn.Module):
             probs = self.output_fc_activation(output)
             return Categorical(probs).sample()
 
-    def forward(self, event, control=None, hidden=None, condition = None):
+    def forward(self, event, event2, control=None, hidden=None, condition = None):
         # One step forward
 
         assert len(event.shape) == 2
@@ -69,7 +69,7 @@ class PerformanceRNN(nn.Module):
             default = torch.zeros(1, batch_size, 1).to(device)
             assert control.shape == (1, batch_size, self.control_dim)
 
-        concat = torch.cat([event, default, control], -1) # TODO add dimension to consider event output
+        concat = torch.cat([event, default, control, event2], -1) # TODO add dimension to consider event output
         input = self.concat_input_fc(concat)  #nn.Linear(self.concat_dim, self.input_dim + event_dim)
         input = self.concat_input_fc_activation(input)  #nn.LeakyReLU(0.1, inplace=True)
 
@@ -99,7 +99,7 @@ class PerformanceRNN(nn.Module):
             return controls[:steps]
         return controls.repeat(steps, 1, 1)
     
-    def generate(self, init, batch_size, init_dim, steps, events=None, controls=None, greedy=1.0,
+    def generate(self, init, batch_size, init_dim, steps, events=None, events2=None, controls=None, greedy=1.0,
                  temperature=1.0, teacher_forcing_ratio=1.0, output_type='softmax', verbose=False):
         # init [batch_size, init_dim]
         # events [steps, batch_size] indeces
@@ -118,6 +118,7 @@ class PerformanceRNN(nn.Module):
             events = events[:steps-1]
 
         event = self.get_primary_event(batch_size)
+        event2 = self.get_primary_event(batch_size)
         use_control = controls is not None
         if use_control:
             controls = self.expand_controls(controls, steps)
@@ -130,7 +131,7 @@ class PerformanceRNN(nn.Module):
 
         for step in step_iter:
             control = controls[step].unsqueeze(0) if use_control else None
-            output, hidden = self.forward(event, control, hidden)
+            output, hidden = self.forward(event, event2, control, hidden)
 
             use_greedy = np.random.random() < greedy
             event = self._sample_event(output, greedy=use_greedy,

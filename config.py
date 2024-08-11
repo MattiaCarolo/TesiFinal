@@ -4,7 +4,7 @@ from Utils.ControlSeq import ControlSeq
 
 #pylint: disable=E1101
 
-device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda')
 
 model = {
     'init_dim': 32,
