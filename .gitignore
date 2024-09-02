@@ -161,3 +161,8 @@ cython_debug/
 
 Dataset-RAW
 bagigi
+save
+saved_outputs
+output/*.mid
+output/*.mid2
+runs

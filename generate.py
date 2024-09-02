@@ -184,35 +184,109 @@ with torch.no_grad():
                                     stochastic=stochastic_beam_search,
                                     verbose=True)
     else:
+        print("bolo")
         outputs = model.generate(init, max_len,
                                  controls=controls,
                                  greedy=greedy_ratio,
                                  temperature=temperature,
                                  verbose=True)
 
-#outputs = outputs.cpu().numpy().T  # [batch, steps]
-
-
-a = 0
-for output in outputs:
-    a += 1
-    if(a < 5):
-        print(output.cpu().numpy())
-
 outputs = outputs.cpu().numpy().T  # [batch, steps]
-
-a = 0
-for output in outputs:
-    a += 1
-    if(a < 2):
-        print(output)
-
-for i, output in enumerate(outputs):
-    n_notes = utils.event_indeces_to_midi_file(output, path)
-
 # ========================================================================
 # Saving
 # ========================================================================
+print(outputs)
+
+class Event:
+
+    def __init__(self, type, time, value):
+        self.type = type
+        self.time = time
+        self.value = value
+
+    def __repr__(self):
+        return 'Event(type={}, time={}, value={})'.format(
+            self.type, self.time, self.value)
+
+def from_array(event_indeces):
+    time = 0
+    events = []
+    for event_index in event_indeces:
+        for event_type, feat_range in EventSeq.feat_ranges().items():
+            if (feat_range.start <= event_index).any() < feat_range.stop:
+                event_value = event_index - feat_range.start
+                events.append(Event(event_type, time, event_value))
+                if event_type == 'time_shift':
+                    time += EventSeq.time_shift_bins[event_value]
+                break
+    return EventSeq(events)
+
+DEFAULT_SAVING_PROGRAM = 1
+DEFAULT_LOADING_PROGRAMS = range(128)
+DEFAULT_RESOLUTION = 220
+DEFAULT_TEMPO = 120
+DEFAULT_VELOCITY = 64
+DEFAULT_PITCH_RANGE = range(21, 109)
+DEFAULT_VELOCITY_RANGE = range(21, 109)
+DEFAULT_NORMALIZATION_BASELINE = 60  # C4
+
+USE_VELOCITY = True
+BEAT_LENGTH = 60 / DEFAULT_TEMPO
+DEFAULT_TIME_SHIFT_BINS = 1.15 ** np.arange(32) / 65
+DEFAULT_VELOCITY_STEPS = 32
+DEFAULT_NOTE_LENGTH = BEAT_LENGTH * 2
+MIN_NOTE_LENGTH = BEAT_LENGTH / 2
+
+from Utils.NotesSeq import Note, NoteSeq
+
+def to_note_seq(events):
+    time = 0
+    notes = []
+
+    velocity = DEFAULT_VELOCITY
+    velocity_bins = EventSeq.get_velocity_bins()
+
+    last_notes = {}
+
+    for event in events:
+        if event.type == 'note_on':
+            pitch = event.value + EventSeq.pitch_range.start
+            note = Note(velocity, pitch, time, None)
+            notes.append(note)
+            last_notes[pitch] = note
+
+        elif event.type == 'note_off':
+            pitch = event.value + EventSeq.pitch_range.start
+
+            if pitch in last_notes:
+                note = last_notes[pitch]
+                note.end = max(time, note.start + MIN_NOTE_LENGTH)
+                del last_notes[pitch]
+
+        elif event.type == 'velocity':
+            index = min(event.value, velocity_bins.size - 1)
+            velocity = velocity_bins[index]
+
+        elif event.type == 'time_shift':
+            time += EventSeq.time_shift_bins[event.value]
+
+    for note in notes:
+        if note.end is None:
+            note.end = note.start + DEFAULT_NOTE_LENGTH
+
+        note.velocity = int(note.velocity)
+
+    return NoteSeq(notes)
+
+def event_indeces_to_midi_file(event_indeces, midi_file_name, velocity_scale=0.8):
+    event_seq = from_array(event_indeces)
+    print(event_seq)
+    note_seq = event_seq.to_note_seq()
+    for note in note_seq.notes:
+        note.velocity = int((note.velocity - 64) * velocity_scale + 64)
+    print(note_seq)
+    note_seq.to_midi_file(midi_file_name)
+    return len(note_seq.notes)
 
 os.makedirs(output_dir, exist_ok=True)
 

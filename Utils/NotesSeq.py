@@ -12,6 +12,7 @@ from pretty_midi import PrettyMIDI, Note, Instrument
 
 # NoteSeq -------------------------------------------------------------------------
 
+# Parameters for handling MIDI notes
 DEFAULT_SAVING_PROGRAM = 1
 DEFAULT_LOADING_PROGRAMS = range(128)
 DEFAULT_RESOLUTION = 220
@@ -25,7 +26,14 @@ class NoteSeq:
 
     @staticmethod
     def from_midi(midi, programs=DEFAULT_LOADING_PROGRAMS):
-
+    #     Purpose: Creates a NoteSeq object from a PrettyMIDI object (representing a MIDI file).
+	# •	Parameters:
+	#   •	midi: A PrettyMIDI object that represents a MIDI file.
+	#   •	programs: A list of instrument programs to include (default is all programs from 0 to 127).
+	# •	Functionality:
+	#   •	Extracts notes from all instruments in the midi object that match the specified programs and are not drums.
+	#   •	Combines these notes into a single sequence using itertools.chain.
+	#   •	Returns a NoteSeq object containing all these notes.
         notes = itertools.chain(*[
             inst.notes for inst in midi.instruments
             if inst.program in programs and not inst.is_drum])
@@ -34,7 +42,15 @@ class NoteSeq:
 
     @staticmethod
     def from_tracks(midi, flag, programs=DEFAULT_LOADING_PROGRAMS):
-        # Variable flag permits to manage different tracks
+    #     Purpose: Creates a NoteSeq object from specific tracks (instruments) of a MIDI file.
+	# •	Parameters:
+	#   •	midi: A PrettyMIDI object.
+	#   •	flag: A list of indices indicating which tracks (instruments) to include.
+	#   •	programs: List of instrument programs (defaults to all programs).
+	# •	Functionality:
+	#   •	Extracts notes from the specified tracks in the flag list.
+	#   •	Combines these notes and returns a NoteSeq object containing them.
+    # Variable flag permits to manage different tracks
         group_indices = flag
         group_notes = itertools.chain(*[
             midi.instruments[i].notes for i in group_indices
