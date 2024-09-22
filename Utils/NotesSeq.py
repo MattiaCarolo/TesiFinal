@@ -46,6 +46,7 @@ class NoteSeq:
 	# •	Parameters:
 	#   •	midi: A PrettyMIDI object.
 	#   •	flag: A list of indices indicating which tracks (instruments) to include.
+    #           Cases can be found on function 'from_midi_file'
 	#   •	programs: List of instrument programs (defaults to all programs).
 	# •	Functionality:
 	#   •	Extracts notes from the specified tracks in the flag list.
@@ -61,6 +62,15 @@ class NoteSeq:
 
     @staticmethod
     def from_midi_file(path, *args, **kwargs):
+    # •	Purpose: Creates two NoteSeq objects from a MIDI file specified by a file path.
+	# •	Parameters:
+	#   •	path: The file path to the MIDI file.
+	#   •	Additional args and kwargs to pass to the PrettyMIDI object.
+	# •	Functionality:
+	#   •	Reads the MIDI file from the given path.
+	#   •	Depending on the number of tracks, it selects specific tracks to create two NoteSeq objects.
+	# •	Returns these two NoteSeq objects under two different streams
+
         midi = PrettyMIDI(path)
         track_len = len(midi.instruments)
 
@@ -83,10 +93,23 @@ class NoteSeq:
 
     @staticmethod
     def merge(*note_seqs):
+    # •	Purpose: Merges multiple NoteSeq objects into a single NoteSeq object (TLDR )
+	# •	Parameters:
+	#   •	note_seqs: A variable number of NoteSeq objects to be merged.
+	# •	Functionality:
+	#   •	Combines all the notes from the given NoteSeq objects.
+	# •	Returns a new NoteSeq object containing all these notes concatenated
         notes = itertools.chain(*[seq.notes for seq in note_seqs])
         return NoteSeq(list(notes))
 
     def __init__(self, notes=[]):
+    # •	Purpose: Initializes a NoteSeq object.
+	# •	Parameters:
+	#   •	notes: A list of Note objects (from pretty_midi).
+	# •	Functionality:
+	#   •	Initializes the notes attribute to an empty list.
+	# •	If notes are provided, it checks that each note is a valid Note object and that the note’s end time is after its start time.
+	# •	Adds valid notes to the sequence.
         self.notes = []
         if notes:
             for note in notes:
@@ -95,10 +118,22 @@ class NoteSeq:
             self.add_notes(list(notes))
 
     def copy(self):
+    # •	Purpose: Creates a deep copy of the NoteSeq object.
+	# •	Functionality:
+	# •	Returns a new NoteSeq object that is a deep copy of the current one.
         return copy.deepcopy(self)
 
     def to_midi(self, program=DEFAULT_SAVING_PROGRAM,
                 resolution=DEFAULT_RESOLUTION, tempo=DEFAULT_TEMPO):
+    # •	Purpose: Converts the NoteSeq object into a PrettyMIDI object.
+	# •	Parameters:
+	#   •	program: Instrument program number (default 1).
+	#   •	resolution: Resolution of the MIDI file (default 220).
+	#   •	tempo: Tempo of the MIDI file (default 120 BPM).
+	# •	Functionality:
+	#   •	Creates a new PrettyMIDI object with the specified resolution and tempo.
+	#   •	Adds the notes from the NoteSeq to an instrument with the given program number.
+	# •	Returns the PrettyMIDI object.
         midi = PrettyMIDI(resolution=resolution, initial_tempo=tempo)
         inst = Instrument(program, False, 'NoteSeq')
         inst.notes = copy.deepcopy(self.notes)
@@ -106,13 +141,30 @@ class NoteSeq:
         return midi
 
     def to_midi_file(self, path, *args, **kwargs):
+    # •	Purpose: Writes the NoteSeq object to a MIDI file.
+	# •	Parameters:
+	#   •	path: File path where the MIDI file will be saved.
+	# •	Functionality:
+	#   •	Converts the NoteSeq to a PrettyMIDI object and writes it to the specified file path.
         self.to_midi(*args, **kwargs).write(path)
 
     def add_notes(self, notes):
+    # •	Purpose: Adds notes to the NoteSeq object.
+	# •	Parameters:
+	#   •	notes: A list of Note objects to add.
+	# •	Functionality:
+	#   •	Adds the provided notes to the existing list of notes.
+	#   •	Sorts the notes by their start time.
         self.notes += notes
         self.notes.sort(key=lambda note: note.start)
 
     def adjust_pitches(self, offset):
+    # •	Purpose: Adjusts the pitch of all notes in the NoteSeq.
+	# •	Parameters:
+	#   •	offset: An integer offset to add to each note’s pitch.
+	# •	Functionality:
+	#   •	Increases or decreases each note’s pitch by the offset.
+	#   •	Ensures the pitch stays within the valid MIDI range (0-127).
         for note in self.notes:
             pitch = note.pitch + offset
             pitch = 0 if pitch < 0 else pitch
@@ -120,6 +172,13 @@ class NoteSeq:
             note.pitch = pitch
 
     def adjust_velocities(self, offset):
+    # •	Purpose: Adjusts the velocity (volume) of all notes in the NoteSeq.
+	# •	Parameters:
+	#   •	offset: An integer offset to add to each note’s velocity.
+	# •	Functionality:
+	#   •	Increases or decreases each note’s velocity by the offset.
+	#   •	Ensures the velocity stays within the valid MIDI range (0-127).
+
         for note in self.notes:
             velocity = note.velocity + offset
             velocity = 0 if velocity < 0 else velocity
@@ -127,11 +186,22 @@ class NoteSeq:
             note.velocity = velocity
 
     def adjust_time(self, offset):
+    # •	Purpose: Adjusts the start and end times of all notes in the NoteSeq.
+	# •	Parameters:
+	#   •	offset: A time offset (in seconds) to add to each note’s start and end time.
+	# •	Functionality:
+	#   •	Increases each note’s start and end times by the offset.
         for note in self.notes:
             note.start += offset
             note.end += offset
 
     def trim_overlapped_notes(self, min_interval=0):
+    # - Purpose: Removes or trims notes that overlap in time.
+    # - Parameters:
+    #     - `min_interval`: Minimum allowed time interval between overlapping notes (default is 0).
+    # - Functionality:
+    #   - Iterates through all notes and checks for overlaps with notes of the same pitch.
+    #   - If two notes overlap or are closer than `min_interval`, it adjusts or removes notes to resolve the overlap.
         last_notes = {}
         for i, note in enumerate(self.notes):
             if note.pitch in last_notes:
